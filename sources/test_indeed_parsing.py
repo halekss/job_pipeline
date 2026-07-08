@@ -26,7 +26,7 @@ def test_parses_two_offers_from_fixture():
     page = _load_fixture()
     offers = _parse_results(page)
 
-    assert len(offers) == 2, f"attendu 2 offres, obtenu {len(offers)}"
+    assert len(offers) == 3, f"attendu 3 offres, obtenu {len(offers)}"
     print("OK: test_parses_two_offers_from_fixture")
 
 
@@ -59,10 +59,29 @@ def test_parses_offer_without_salary():
     print("OK: test_parses_offer_without_salary")
 
 
+def test_salary_containing_contract_keyword_does_not_override_contract_type():
+    """Régression : la balise <li> du salaire porte aussi le token
+    data-testid="attribute_snippet_testid" (en plus de
+    "salary-snippet-container"), donc le sélecteur CSS ~= la matchait
+    aussi. Si le texte du salaire contient un mot-clé de CONTRACT_KEYWORDS
+    (ici "contrat"), il ne doit pas être renvoyé à la place du vrai badge
+    de type de contrat ("CDI")."""
+    page = _load_fixture()
+    offers = _parse_results(page)
+    third = offers[2]
+
+    assert third.id == "indeed_011122233344455", third.id
+    assert third.company == "Contrato Analytics", third.company
+    assert "contrat" in third.salary.lower(), third.salary
+    assert third.contract_type == "CDI", third.contract_type
+    print("OK: test_salary_containing_contract_keyword_does_not_override_contract_type")
+
+
 def main():
     test_parses_two_offers_from_fixture()
     test_parses_offer_with_salary()
     test_parses_offer_without_salary()
+    test_salary_containing_contract_keyword_does_not_override_contract_type()
     print("\nTous les tests passent.")
 
 

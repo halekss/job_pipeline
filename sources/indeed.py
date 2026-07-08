@@ -62,7 +62,9 @@ def _parse_results(page) -> list[JobOffer]:
         salary = card.css('li[data-testid~="salary-snippet-container"] span::text').get()
         metadata = [
             m.strip()
-            for m in card.css('li[data-testid~="attribute_snippet_testid"] span::text').getall()
+            for m in card.css(
+                'li[data-testid~="attribute_snippet_testid"]:not(.salary-snippet-container) span::text'
+            ).getall()
             if m.strip()
         ]
         highlights = card.xpath("following-sibling::ul[1]//li/text()").getall()
