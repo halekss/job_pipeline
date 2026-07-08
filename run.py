@@ -29,6 +29,7 @@ load_dotenv(Path(__file__).parent / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
 
 from sources.france_travail import FranceTravailSource
+from sources.indeed import IndeedSource
 from pipeline.filter import filter_offers
 from pipeline.dedup import DedupStore
 from notifier.mailer import EmailNotifier
@@ -104,8 +105,19 @@ def run(dry_run: bool = False, reset_dedup: bool = False, alternance_only: bool 
         logger.error("Erreur France Travail : %s", e)
         _alert_failure(f"Erreur lors de la collecte France Travail : {e}")
 
+    try:
+        indeed = IndeedSource(
+            keywords=KEYWORDS,
+            locations=LOCATIONS,
+        )
+        indeed_offers = indeed.fetch()
+        all_offers.extend(indeed_offers)
+        logger.info("Indeed : %d offres", len(indeed_offers))
+    except Exception as e:
+        logger.error("Erreur Indeed : %s", e)
+        _alert_failure(f"Erreur lors de la collecte Indeed : {e}")
+
     # Ici on pourra ajouter d'autres sources plus tard :
-    # all_offers.extend(IndeedSource(...).fetch())
     # all_offers.extend(WTTJSource(...).fetch())
 
     if not all_offers:
