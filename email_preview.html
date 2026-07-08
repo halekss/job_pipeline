@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body        { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; color: #333; }
+    .container  { max-width: 680px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; }
+    .header     { background: #4F46E5; color: #fff; padding: 24px 32px; }
+    .header h1  { margin: 0; font-size: 20px; font-weight: 600; }
+    .header p   { margin: 6px 0 0; font-size: 13px; opacity: 0.85; }
+    .summary    { background: #EEF2FF; padding: 12px 32px; font-size: 13px; color: #4F46E5; border-bottom: 1px solid #E0E7FF; }
+    .offers     { padding: 24px 32px; }
+    .offer      { border: 1px solid #E5E7EB; border-radius: 8px; padding: 18px; margin-bottom: 16px; }
+    .offer-top  { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .offer h2   { margin: 0 0 4px; font-size: 15px; color: #111827; }
+    .offer .company { font-size: 13px; color: #6B7280; margin: 0 0 10px; }
+    .score-badge { background: #4F46E5; color: #fff; font-size: 12px; font-weight: 600;
+                   padding: 3px 10px; border-radius: 12px; white-space: nowrap; flex-shrink: 0; }
+    .score-badge.high   { background: #059669; }
+    .score-badge.medium { background: #D97706; }
+    .tags       { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .tag        { font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+    .tag-contrat  { background: #EEF2FF; color: #4338CA; }
+    .tag-lieu     { background: #F0FDF4; color: #166534; }
+    .tag-remote   { background: #FFF7ED; color: #9A3412; }
+    .tag-salaire  { background: #F0F9FF; color: #075985; }
+    .tag-source   { background: #F9FAFB; color: #6B7280; }
+    .description { font-size: 13px; color: #4B5563; line-height: 1.6; margin: 0 0 14px; }
+    .skills     { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+    .skill      { font-size: 11px; background: #F3F4F6; color: #374151; padding: 2px 7px; border-radius: 3px; }
+    .cta        { display: inline-block; background: #4F46E5; color: #fff !important;
+                  text-decoration: none; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+    .footer     { background: #F9FAFB; padding: 16px 32px; font-size: 11px; color: #9CA3AF;
+                  border-top: 1px solid #E5E7EB; text-align: center; }
+    .no-offers  { text-align: center; padding: 40px; color: #9CA3AF; font-size: 14px; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>🎯 Alerte offres d'emploi</h1>
+    <p>16/06/2026 à 19:07 · 4 nouvelle(s) offre(s) trouvée(s)</p>
+  </div>
+
+  <div class="summary">
+    Mots-clés : <strong>Data Analyst, Big Data, alternance data</strong> &nbsp;·&nbsp; Zone : <strong>59 - Nord, 80 - Somme</strong>
+  </div>
+
+  <div class="offers">
+    
+      
+    <div class="offer">
+      <div class="offer-top">
+        <div>
+          <h2>Junior Data Analyst Circularity (f/m/d)</h2>
+          <p class="company">Entreprise non communiquée · Publiée il y a 3 jour(s)</p>
+        </div>
+        <span class="score-badge high">Score 88</span>
+      </div>
+      <div class="tags">
+        <span class="tag tag-contrat">CDD - 12 Mois</span>
+        <span class="tag tag-lieu">📍 59 - Villeneuve-d'Ascq</span>
+        <span class="tag tag-source">France Travail</span>
+      </div>
+      <p class="description">Dans le cadre de notre développement, nous recherchons un(e) alternant(e) passionné(e) par la data. Vous travaillerez sur des projets d'analyse et de visualisation de données en collaboration avec nos équipes métier.</p>
+      <div class="skills"><span class="skill">Python</span><span class="skill">SQL</span><span class="skill">Power BI</span><span class="skill">Pandas</span></div>
+      <a class="cta" href="https://candidat.francetravail.fr/offres/recherche/detail/ft_001" target="_blank">Voir l'offre →</a>
+    </div>
+    <div class="offer">
+      <div class="offer-top">
+        <div>
+          <h2>Alternance Data Analyste (H/F)</h2>
+          <p class="company">CGL · Publiée il y a 6 jour(s)</p>
+        </div>
+        <span class="score-badge medium">Score 61</span>
+      </div>
+      <div class="tags">
+        <span class="tag tag-contrat">CDD - 12 Mois</span>
+        <span class="tag tag-lieu">📍 59 - Lille</span>
+        <span class="tag tag-remote">🏠 Télétravail partiel</span>
+        <span class="tag tag-salaire">💶 Selon profil</span>
+        <span class="tag tag-source">France Travail</span>
+      </div>
+      <p class="description">Dans le cadre de notre développement, nous recherchons un(e) alternant(e) passionné(e) par la data. Vous travaillerez sur des projets d'analyse et de visualisation de données en collaboration avec nos équipes métier.</p>
+      <div class="skills"><span class="skill">Python</span><span class="skill">SQL</span><span class="skill">Airflow</span></div>
+      <a class="cta" href="https://candidat.francetravail.fr/offres/recherche/detail/ft_002" target="_blank">Voir l'offre →</a>
+    </div>
+    <div class="offer">
+      <div class="offer-top">
+        <div>
+          <h2>Apprenti Data Analyst H/F</h2>
+          <p class="company">PROXISERVE · Publiée il y a 7 jour(s)</p>
+        </div>
+        <span class="score-badge medium">Score 48</span>
+      </div>
+      <div class="tags">
+        <span class="tag tag-contrat">CDD - 12 Mois</span>
+        <span class="tag tag-lieu">📍 59 - Lambersart</span>
+        <span class="tag tag-source">France Travail</span>
+      </div>
+      <p class="description">Dans le cadre de notre développement, nous recherchons un(e) alternant(e) passionné(e) par la data. Vous travaillerez sur des projets d'analyse et de visualisation de données en collaboration avec nos équipes métier.</p>
+      <div class="skills"><span class="skill">SQL</span><span class="skill">Excel</span><span class="skill">Power BI</span></div>
+      <a class="cta" href="https://candidat.francetravail.fr/offres/recherche/detail/ft_003" target="_blank">Voir l'offre →</a>
+    </div>
+    <div class="offer">
+      <div class="offer-top">
+        <div>
+          <h2>Alternance Data Analyst en alternance</h2>
+          <p class="company">Décathlon · Publiée il y a 10 jour(s)</p>
+        </div>
+        <span class="score-badge">Score 29</span>
+      </div>
+      <div class="tags">
+        <span class="tag tag-contrat">CDD - 12 Mois</span>
+        <span class="tag tag-lieu">📍 59 - Lille</span>
+        <span class="tag tag-remote">🏠 Télétravail total</span>
+        <span class="tag tag-salaire">💶 Selon grille alternance</span>
+        <span class="tag tag-source">France Travail</span>
+      </div>
+      <p class="description">Dans le cadre de notre développement, nous recherchons un(e) alternant(e) passionné(e) par la data. Vous travaillerez sur des projets d'analyse et de visualisation de données en collaboration avec nos équipes métier.</p>
+      
+      <a class="cta" href="https://candidat.francetravail.fr/offres/recherche/detail/ft_004" target="_blank">Voir l'offre →</a>
+    </div>
+    
+  </div>
+
+  <div class="footer">
+    Généré automatiquement par job_pipeline · <a href="#" style="color:#9CA3AF;">Se désabonner</a>
+  </div>
+
+</div>
+</body>
+</html>
