@@ -1,9 +1,11 @@
 """
-Test de _request_with_retry (sources/france_travail.py) - retry avec backoff
-sur erreurs réseau et codes 429/5xx.
+Test de _request_with_retry (sources/http_retry.py) - retry avec backoff
+sur erreurs réseau et codes 429/5xx, généralisé pour être réutilisable
+entre connecteurs (France Travail utilise `.status_code`, Indeed utilise
+`.status` via scrapling).
 
 Usage (depuis sources/) :
-    python test_retry.py
+    python test_http_retry.py
 """
 import sys
 import os
@@ -11,12 +13,17 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import requests
-from france_travail import _request_with_retry
+from http_retry import _request_with_retry
 
 
 class FakeResponse:
     def __init__(self, status_code):
         self.status_code = status_code
+
+
+class FakeScraplingResponse:
+    def __init__(self, status):
+        self.status = status
 
 
 def test_retries_on_network_error_then_succeeds():
@@ -109,12 +116,36 @@ def test_returns_last_response_after_exhausting_retries_on_5xx():
     print("OK: test_returns_last_response_after_exhausting_retries_on_5xx")
 
 
+def test_supports_custom_status_getter_and_exception_types():
+    calls = {"n": 0}
+
+    def request_func():
+        calls["n"] += 1
+        if calls["n"] < 2:
+            raise ValueError("erreur générique côté lib scraping")
+        return FakeScraplingResponse(200)
+
+    response = _request_with_retry(
+        request_func,
+        max_attempts=3,
+        base_delay=0.01,
+        sleep_func=lambda s: None,
+        status_getter=lambda r: r.status,
+        exception_types=(ValueError,),
+    )
+
+    assert response.status == 200, f"attendu 200, obtenu {response.status}"
+    assert calls["n"] == 2, f"attendu 2 appels, obtenu {calls['n']}"
+    print("OK: test_supports_custom_status_getter_and_exception_types")
+
+
 def main():
     test_retries_on_network_error_then_succeeds()
     test_retries_on_429_then_succeeds()
     test_does_not_retry_on_client_error()
     test_raises_after_exhausting_retries_on_network_error()
     test_returns_last_response_after_exhausting_retries_on_5xx()
+    test_supports_custom_status_getter_and_exception_types()
     print("\nTous les tests passent.")
 
 

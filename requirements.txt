@@ -1,2 +1,4 @@
 requests==2.33.1
 python-dotenv==1.2.2
+scrapling[fetchers]==0.4.8
+lxml-html-clean==0.4.5
