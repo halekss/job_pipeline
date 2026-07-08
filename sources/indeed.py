@@ -11,10 +11,17 @@ Jungle, passé en 2026 à un système de matching nécessitant un compte).
 import logging
 from typing import Optional
 
+from scrapling.fetchers import Fetcher
+
 try:
     from .base_source import BaseSource, JobOffer
 except ImportError:
     from base_source import BaseSource, JobOffer
+
+try:
+    from .http_retry import _request_with_retry
+except ImportError:
+    from http_retry import _request_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -84,3 +91,71 @@ def _parse_results(page) -> list[JobOffer]:
             skills=[],
         ))
     return offers
+
+
+class IndeedSource(BaseSource):
+    """Récupère les offres via scraping public d'Indeed (sans compte)."""
+
+    @property
+    def name(self) -> str:
+        return "Indeed"
+
+    def fetch(self) -> list[JobOffer]:
+        """Point d'entrée principal : collecte toutes les offres."""
+        offers: list[JobOffer] = []
+
+        for location in self.locations:
+            for keyword in self.keywords:
+                batch = self._fetch_batch(keyword, location)
+                offers.extend(batch)
+                logger.info(
+                    "[%s] %d offres pour '%s' à '%s'",
+                    self.name, len(batch), keyword, location
+                )
+
+        # Déduplication immédiate par id dans cette source
+        seen: set[str] = set()
+        unique = []
+        for o in offers:
+            if o.id not in seen:
+                seen.add(o.id)
+                unique.append(o)
+
+        logger.info("[%s] %d offres uniques récupérées.", self.name, len(unique))
+        return unique
+
+    def _fetch_batch(self, keyword: str, location: str) -> list[JobOffer]:
+        """Appelle Indeed pour un couple (keyword, location) et retourne les offres."""
+        params = self._build_params(keyword, location)
+
+        try:
+            resp = _request_with_retry(
+                lambda: Fetcher.get(
+                    SEARCH_URL,
+                    params=params,
+                    stealthy_headers=True,
+                    impersonate="chrome",
+                    timeout=15,
+                ),
+                status_getter=lambda r: r.status,
+                exception_types=(Exception,),
+            )
+
+            if resp.status != 200:
+                logger.warning(
+                    "[%s] Réponse inattendue %d pour '%s' / '%s'",
+                    self.name, resp.status, keyword, location,
+                )
+                return []
+
+            return _parse_results(resp)
+
+        except Exception as e:
+            logger.error("[%s] Erreur réseau (après tentatives) : %s", self.name, e)
+            return []
+
+    def _build_params(self, keyword: str, location: str) -> dict:
+        """Construit les paramètres de recherche (q=mots-clés, l=localisation)."""
+        loc = location.strip()
+        label = LOCATION_LABELS.get(loc, loc)
+        return {"q": keyword, "l": label}
