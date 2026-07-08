@@ -8,9 +8,13 @@ Usage (depuis sources/) :
 import logging
 import sys
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 from sources.france_travail import FranceTravailSource
 from filter import filter_offers, score_offer
@@ -19,9 +23,6 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
-
-FT_CLIENT_ID     = "PAR_rechercheemploidata_0fd8def2bc40d56042714bead572a6d5775a0fa8cc3a804c9d27882a36739dfd"
-FT_CLIENT_SECRET = "68c0d1dfd629e629cac12e1016e9003546b49afa0f267a317141d372c6ccb789"
 
 
 def main():
@@ -33,8 +34,6 @@ def main():
         keywords=["Data Analyst", "Big Data", "alternance data"],
         locations=["59"],
         max_results=50,
-        client_id=FT_CLIENT_ID,
-        client_secret=FT_CLIENT_SECRET,
     )
 
     print("\nRécupération des offres...")

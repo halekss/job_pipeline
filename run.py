@@ -61,6 +61,18 @@ DEDUP_PURGE_DAYS = 60    # Entrées plus vieilles supprimées automatiquement
 
 
 # ---------------------------------------------------------------------------
+# Alerte d'échec
+# ---------------------------------------------------------------------------
+
+def _alert_failure(reason: str):
+    """Tente d'envoyer un email d'alerte ; n'échoue jamais bruyamment."""
+    try:
+        EmailNotifier().send_failure_alert(reason)
+    except Exception as e:
+        logger.error("Impossible d'envoyer l'alerte d'échec : %s", e)
+
+
+# ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
 
@@ -90,6 +102,7 @@ def run(dry_run: bool = False, reset_dedup: bool = False, alternance_only: bool 
         logger.info("France Travail : %d offres", len(ft_offers))
     except Exception as e:
         logger.error("Erreur France Travail : %s", e)
+        _alert_failure(f"Erreur lors de la collecte France Travail : {e}")
 
     # Ici on pourra ajouter d'autres sources plus tard :
     # all_offers.extend(IndeedSource(...).fetch())
@@ -197,8 +210,13 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    run(
-        dry_run=args.dry_run,
-        reset_dedup=args.reset_dedup,
-        alternance_only=not args.no_alternance,
-    )
+    try:
+        run(
+            dry_run=args.dry_run,
+            reset_dedup=args.reset_dedup,
+            alternance_only=not args.no_alternance,
+        )
+    except Exception as e:
+        logger.exception("Le pipeline a échoué de façon inattendue.")
+        _alert_failure(f"Erreur inattendue : {e}")
+        sys.exit(1)

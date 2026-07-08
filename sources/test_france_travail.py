@@ -1,17 +1,22 @@
 """
 Script de test rapide pour le connecteur France Travail.
 
+Nécessite FT_CLIENT_ID et FT_CLIENT_SECRET dans le .env à la racine du projet
+(chargé automatiquement) ou en variables d'environnement.
+
 Usage :
-    export FT_CLIENT_ID="ton_id"
-    export FT_CLIENT_SECRET="ton_secret"
     python test_france_travail.py
 """
 
 import logging
 import os
 import sys
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 from france_travail import FranceTravailSource
 
@@ -30,8 +35,6 @@ def main():
         keywords=["Data Analyst", "Big Data", "alternance data"],
         locations=["59", "80"],  # libellé + code INSEE
         max_results=20,
-        client_id='PAR_rechercheemploidata_0fd8def2bc40d56042714bead572a6d5775a0fa8cc3a804c9d27882a36739dfd',
-        client_secret='68c0d1dfd629e629cac12e1016e9003546b49afa0f267a317141d372c6ccb789'
     )
 
     print(f"\nSource : {source.name}")

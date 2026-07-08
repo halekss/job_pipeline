@@ -11,10 +11,11 @@ Variables d'env requises :
 """
 
 import os
+import time
 import logging
 import requests
 from datetime import datetime
-from typing import Optional
+from typing import Callable, Optional
 
 try:
     from .base_source import BaseSource, JobOffer
@@ -43,6 +44,43 @@ REMOTE_MAP = {
     "2": "partial",
     "3": "full",
 }
+
+# Codes HTTP transitoires : on retente plutôt que d'abandonner immédiatement
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
+
+def _request_with_retry(
+    request_func: Callable[[], requests.Response],
+    max_attempts: int = 3,
+    base_delay: float = 1.0,
+    sleep_func: Callable[[float], None] = time.sleep,
+) -> requests.Response:
+    """
+    Appelle request_func() avec retry et backoff exponentiel.
+
+    Retente sur requests.RequestException (erreurs réseau) et sur les
+    codes RETRYABLE_STATUS_CODES (429/5xx). Les autres statuts HTTP sont
+    retournés tels quels dès le premier appel.
+    """
+    last_exception: Optional[requests.RequestException] = None
+    response: Optional[requests.Response] = None
+
+    for attempt in range(max_attempts):
+        try:
+            response = request_func()
+        except requests.RequestException as e:
+            last_exception = e
+            if attempt < max_attempts - 1:
+                sleep_func(base_delay * (2 ** attempt))
+                continue
+            raise
+        else:
+            if response.status_code in RETRYABLE_STATUS_CODES and attempt < max_attempts - 1:
+                sleep_func(base_delay * (2 ** attempt))
+                continue
+            return response
+
+    return response
 
 
 class FranceTravailSource(BaseSource):
@@ -139,11 +177,13 @@ class FranceTravailSource(BaseSource):
         }
 
         try:
-            resp = requests.get(
-                SEARCH_URL,
-                params=params,
-                headers=headers,
-                timeout=15,
+            resp = _request_with_retry(
+                lambda: requests.get(
+                    SEARCH_URL,
+                    params=params,
+                    headers=headers,
+                    timeout=15,
+                )
             )
 
             if resp.status_code not in (200, 206):
@@ -158,7 +198,7 @@ class FranceTravailSource(BaseSource):
             return [self._normalize(o) for o in raw_offers]
 
         except requests.RequestException as e:
-            logger.error("[%s] Erreur réseau : %s", self.name, e)
+            logger.error("[%s] Erreur réseau (après tentatives) : %s", self.name, e)
             return []
 
     def _build_params(self, keyword: str, location: str) -> dict:

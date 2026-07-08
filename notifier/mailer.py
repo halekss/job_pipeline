@@ -87,6 +87,18 @@ class EmailNotifier:
 
         return self._send_message(msg)
 
+    def send_failure_alert(self, reason: str) -> bool:
+        """
+        Envoie un email minimal signalant l'échec d'un run du pipeline.
+
+        À utiliser quand une étape échoue silencieusement (auth API, etc.)
+        pour ne pas dépendre de la lecture des logs.
+        """
+        subject = f"[Job Pipeline] Échec du run · {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+        html_body = f"<p>Le pipeline a échoué :</p><pre>{reason}</pre>"
+        msg = self._build_message(subject, html_body)
+        return self._send_message(msg)
+
     def send_empty_digest(self, keywords: list[str], locations: list[str]) -> bool:
         """Envoie un email même s'il n'y a pas de nouvelles offres (optionnel)."""
         subject = f"[Job Pipeline] Aucune nouvelle offre · {datetime.now().strftime('%d/%m/%Y')}"
