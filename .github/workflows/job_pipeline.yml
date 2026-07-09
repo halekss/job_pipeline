@@ -2,8 +2,7 @@ name: Job Pipeline
 
 on:
   schedule:
-    # 06:00 UTC = 08:00 Paris (heure d'été) / 07:00 Paris (heure d'hiver)
-    - cron: "0 6 * * 1-5"
+    - cron: "0 18 * * "
   workflow_dispatch:
 
 permissions:
