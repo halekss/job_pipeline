@@ -60,5 +60,13 @@ Identique au pipeline existant — c'est l'intérêt de l'abstraction `BaseSourc
 ## Hors scope
 
 - Connecteur WTTJ (reporté, voir Décision ci-dessus).
-- Fallback automatique vers `StealthyFetcher`/navigateur headless si `Fetcher.get` se fait bloquer en prod (à réévaluer si ça arrive réellement, piste documentée mais non implémentée).
 - Pagination au-delà de la première page de résultats Indeed (hors scope, comme la pagination France Travail dans COM-12).
+
+## Addendum (2026-07-09) : escalade vers StealthyFetcher
+
+Le risque décrit ci-dessus s'est matérialisé dès la première exécution en prod : 100% des requêtes Indeed (24/24, tous couples keyword/location) ont reçu un 403 immédiat depuis le runner GitHub Actions, alors que France Travail fonctionnait normalement. Diagnostic confirmé par test direct : `Fetcher.get(..., stealthy_headers=True, impersonate="chrome")` reste bloqué (empreinte TLS/en-têtes imitée mais pas un vrai navigateur), tandis que `StealthyFetcher.fetch(...)` (Chromium headless piloté par `patchright`) passe (200, offres parsées) sur la même URL.
+
+`sources/indeed.py` utilise maintenant `StealthyFetcher.fetch` à la place de `Fetcher.get`. Conséquences :
+- CI : nouvelle étape `python -m patchright install --with-deps chromium` avant `python run.py` (coût ~1-2 min / run, navigateur pas mis en cache pour l'instant).
+- `_build_params` inchangé ; l'URL est construite manuellement (`urlencode`) car `StealthyFetcher.fetch` prend une URL complète, pas de `params=`.
+- Gestion des erreurs inchangée (`_request_with_retry`, blocage → liste vide, pas d'exception qui remonterait à l'alerte COM-6).

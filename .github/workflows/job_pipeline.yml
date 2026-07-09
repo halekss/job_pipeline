@@ -26,6 +26,9 @@ jobs:
       - name: Installer les dépendances
         run: pip install -r requirements.txt
 
+      - name: Installer Chromium (StealthyFetcher / connecteur Indeed)
+        run: python -m patchright install --with-deps chromium
+
       - name: Exécuter le pipeline
         env:
           FT_CLIENT_ID: ${{ secrets.FT_CLIENT_ID }}

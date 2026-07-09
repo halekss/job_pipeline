@@ -1,17 +1,21 @@
 """
 Connecteur Indeed (scraping public, sans compte).
 
-Utilise scrapling.fetchers.Fetcher pour imiter l'empreinte d'un vrai
-navigateur sans lancer un navigateur complet. Cf.
+Utilise scrapling.fetchers.StealthyFetcher (navigateur Chromium headless
+piloté par patchright) : le client HTTP léger (Fetcher.get) se fait
+bloquer par le système anti-bot d'Indeed depuis les IP de datacenter
+(GitHub Actions) même avec des en-têtes/empreinte TLS imitant un
+navigateur — cf.
 docs/superpowers/specs/2026-07-08-indeed-connector-design.md pour le
-contexte et les alternatives évaluées (dont l'abandon de Welcome to the
-Jungle, passé en 2026 à un système de matching nécessitant un compte).
+contexte, les alternatives évaluées (dont l'abandon de Welcome to the
+Jungle) et l'addendum sur cette escalade.
 """
 
 import logging
 from typing import Optional
+from urllib.parse import urlencode
 
-from scrapling.fetchers import Fetcher
+from scrapling.fetchers import StealthyFetcher
 
 try:
     from .base_source import BaseSource, JobOffer
@@ -127,15 +131,15 @@ class IndeedSource(BaseSource):
     def _fetch_batch(self, keyword: str, location: str) -> list[JobOffer]:
         """Appelle Indeed pour un couple (keyword, location) et retourne les offres."""
         params = self._build_params(keyword, location)
+        url = f"{SEARCH_URL}?{urlencode(params)}"
 
         try:
             resp = _request_with_retry(
-                lambda: Fetcher.get(
-                    SEARCH_URL,
-                    params=params,
-                    stealthy_headers=True,
-                    impersonate="chrome",
-                    timeout=15,
+                lambda: StealthyFetcher.fetch(
+                    url,
+                    headless=True,
+                    network_idle=True,
+                    timeout=30000,
                 ),
                 status_getter=lambda r: r.status,
                 exception_types=(Exception,),

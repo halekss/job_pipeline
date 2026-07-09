@@ -1,6 +1,6 @@
 """
 Test de IndeedSource._fetch_batch / fetch() (sources/indeed.py) avec
-Fetcher.get mocké (aucun appel réseau réel).
+StealthyFetcher.fetch mocké (aucun appel réseau réel).
 
 Usage (depuis sources/) :
     python test_indeed_fetch.py
@@ -26,7 +26,7 @@ class FakeScraplingResponse:
 def test_fetch_batch_returns_empty_list_on_non_200():
     source = IndeedSource(keywords=["data analyst"], locations=["59"])
 
-    with patch("indeed.Fetcher.get", return_value=FakeScraplingResponse(403)):
+    with patch("indeed.StealthyFetcher.fetch", return_value=FakeScraplingResponse(403)):
         offers = source._fetch_batch("data analyst", "59")
 
     assert offers == [], f"attendu liste vide sur 403, obtenu {offers}"
@@ -36,7 +36,7 @@ def test_fetch_batch_returns_empty_list_on_non_200():
 def test_fetch_batch_returns_empty_list_on_exception():
     source = IndeedSource(keywords=["data analyst"], locations=["59"])
 
-    with patch("indeed.Fetcher.get", side_effect=RuntimeError("bloqué")):
+    with patch("indeed.StealthyFetcher.fetch", side_effect=RuntimeError("bloqué")):
         offers = source._fetch_batch("data analyst", "59")
 
     assert offers == [], f"attendu liste vide sur exception, obtenu {offers}"
