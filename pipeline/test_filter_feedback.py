@@ -51,7 +51,7 @@ def test_company_penalty_matches_case_insensitively():
 def test_learned_negative_keyword_pushes_alternance_offer_below_threshold():
     # Cas réel COM-13 : "Alternance Comptable" passe le seuil (20) sur le
     # seul bonus alternance (+25 mot-clé +30 contrat = 55), sans mot-clé
-    # technique. Le pénalité par défaut (DEFAULT_KEYWORD_PENALTY, cf.
+    # technique. La pénalité par défaut (DEFAULT_KEYWORD_PENALTY, cf.
     # pipeline/feedback.py) doit être assez forte pour repasser ce cas
     # précis sous le seuil (55 - pénalité < 20 => pénalité > 35).
     offer = _make_offer("Alternance Comptable", "Cabinet XYZ", contract_type="alternance")

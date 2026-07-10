@@ -29,7 +29,7 @@
 
 **Interfaces:**
 - Consumes: nothing new (uses the `seen_offers` table already created by `pipeline/dedup.py::DedupStore`, same `storage/jobs.db` file).
-- Produces: `FeedbackStore(db_path: Path = DEFAULT_DB_PATH)` with `.record(offer_id: str, reason: Optional[str] = None)`, `.get_company_penalties(threshold: int = 2, penalty: float = 20.0) -> dict[str, float]`, `.get_negative_keywords(penalty: float = 30.0) -> list[tuple[str, float]]`, `.purge_old(days: int = 60) -> int`, `.count() -> int`, `.reset()`. Consumed by Task 3 (via `run.py`, wired in Task 5) and directly by this task's tests.
+- Produces: `FeedbackStore(db_path: Path = DEFAULT_DB_PATH)` with `.record(offer_id: str, reason: Optional[str] = None)`, `.get_company_penalties(threshold: int = 2, penalty: float = 20.0) -> dict[str, float]`, `.get_negative_keywords(penalty: float = 40.0) -> list[tuple[str, float]]`, `.purge_old(days: int = 60) -> int`, `.count() -> int`, `.reset()`. Consumed by Task 3 (via `run.py`, wired in Task 5) and directly by this task's tests. (`DEFAULT_KEYWORD_PENALTY` corrected from 30.0 to 40.0 during Task 3 — see Global Constraints.)
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -227,7 +227,7 @@ DEFAULT_DB_PATH = Path(__file__).parent.parent / "storage" / "jobs.db"
 
 DEFAULT_COMPANY_THRESHOLD = 2
 DEFAULT_COMPANY_PENALTY = 20.0
-DEFAULT_KEYWORD_PENALTY = 30.0
+DEFAULT_KEYWORD_PENALTY = 40.0
 
 
 class FeedbackStore:
@@ -729,6 +729,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from filter import score_offer, filter_offers
 from sources.base_source import JobOffer
+from feedback import DEFAULT_KEYWORD_PENALTY
 
 
 def _make_offer(title, company, contract_type=None, description=""):
@@ -764,14 +765,16 @@ def test_company_penalty_matches_case_insensitively():
 
 def test_learned_negative_keyword_pushes_alternance_offer_below_threshold():
     # Cas réel COM-13 : "Alternance Comptable" passe le seuil (20) sur le
-    # seul bonus alternance (+25 mot-clé +30 contrat), sans mot-clé
-    # technique. Un mot-clé négatif appris doit repasser sous le seuil.
+    # seul bonus alternance (+25 mot-clé +30 contrat = 55), sans mot-clé
+    # technique. La pénalité par défaut (DEFAULT_KEYWORD_PENALTY, cf.
+    # pipeline/feedback.py) doit être assez forte pour repasser ce cas
+    # précis sous le seuil (55 - pénalité < 20 => pénalité > 35).
     offer = _make_offer("Alternance Comptable", "Cabinet XYZ", contract_type="alternance")
     base_score = score_offer(offer)
     assert base_score >= 20, f"précondition : l'offre doit passer le seuil sans feedback (score={base_score})"
 
     penalized_score = score_offer(
-        offer, extra_negative_keywords=[("comptable", 30.0)]
+        offer, extra_negative_keywords=[("comptable", DEFAULT_KEYWORD_PENALTY)]
     )
     assert penalized_score < 20, f"attendu score < 20 après pénalité, obtenu {penalized_score}"
     print("OK: test_learned_negative_keyword_pushes_alternance_offer_below_threshold")
@@ -791,7 +794,7 @@ def test_filter_offers_excludes_offer_pushed_below_threshold_by_feedback():
     assert len(without_feedback) == 1, "précondition : l'offre passe sans feedback"
 
     with_feedback = filter_offers(
-        [offer], min_score=20, extra_negative_keywords=[("comptable", 30.0)]
+        [offer], min_score=20, extra_negative_keywords=[("comptable", DEFAULT_KEYWORD_PENALTY)]
     )
     assert len(with_feedback) == 0, f"attendu 0 offre après pénalité, obtenu {len(with_feedback)}"
     print("OK: test_filter_offers_excludes_offer_pushed_below_threshold_by_feedback")
