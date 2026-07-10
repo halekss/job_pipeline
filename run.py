@@ -2,11 +2,12 @@
 run.py - Point d'entrée principal du pipeline de veille emploi
 
 Orchestre dans l'ordre :
-  1. Collecte des offres (toutes les sources)
-  2. Filtrage et scoring
-  3. Déduplication (offres déjà vues)
-  4. Envoi de l'alerte email
-  5. Marquage des offres comme vues
+  1. Lecture du feedback "pas intéressé" (COM-13)
+  2. Collecte des offres (toutes les sources)
+  3. Filtrage et scoring
+  4. Déduplication (offres déjà vues)
+  5. Envoi de l'alerte email
+  6. Marquage des offres comme vues
 
 Usage :
     python run.py
