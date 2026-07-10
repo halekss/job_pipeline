@@ -5,14 +5,16 @@ Prend une liste de JobOffer et génère le HTML complet à injecter
 dans le template email.html.
 """
 
+import os
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 try:
     from sources.base_source import JobOffer
 except ImportError:
-    import sys, os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    import sys, os as _os
+    sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), ".."))
     from sources.base_source import JobOffer
 
 TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "email.html"
@@ -24,6 +26,21 @@ def _score_class(score: float) -> str:
     if score >= 40:
         return "medium"
     return ""
+
+
+def _mailto_feedback_link(offer: JobOffer) -> str:
+    """
+    Lien mailto pré-rempli pour signaler 'pas intéressé' (COM-13). Retourne
+    une chaîne vide si SMTP_USER n'est pas configuré (l'email reste
+    utilisable sans ce lien).
+    """
+    smtp_user = os.getenv("SMTP_USER")
+    if not smtp_user:
+        return ""
+
+    subject = quote(f"[Job Pipeline Feedback] {offer.id}")
+    body = quote("Pas intéressé.\n\nRaison (optionnel) : ")
+    return f"mailto:{smtp_user}?subject={subject}&body={body}"
 
 
 def _format_offer(offer: JobOffer) -> str:
@@ -69,6 +86,12 @@ def _format_offer(offer: JobOffer) -> str:
     score_cls = _score_class(offer.score)
     badge_cls = f"score-badge {score_cls}".strip()
 
+    mailto = _mailto_feedback_link(offer)
+    feedback_link = (
+        f'<a class="cta cta-secondary" href="{mailto}">Pas intéressé</a>'
+        if mailto else ""
+    )
+
     return f"""
     <div class="offer">
       <div class="offer-top">
@@ -84,6 +107,7 @@ def _format_offer(offer: JobOffer) -> str:
       {desc_html}
       {skills_html}
       <a class="cta" href="{offer.url}" target="_blank">Voir l'offre →</a>
+      {feedback_link}
     </div>"""
 
 
