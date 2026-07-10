@@ -112,26 +112,33 @@ def fetch_feedback_emails(
         message_numbers = data[0].split() if data and data[0] else []
 
         for num in message_numbers:
-            typ, msg_data = imap.fetch(num, "(BODY[])")
-            if typ != "OK" or not msg_data or msg_data[0] is None:
-                continue
+            try:
+                typ, msg_data = imap.fetch(num, "(BODY[])")
+                if typ != "OK" or not msg_data or msg_data[0] is None:
+                    continue
 
-            raw_email = msg_data[0][1]
-            msg = email.message_from_bytes(raw_email)
-            subject = _decode_subject(msg.get("Subject", ""))
+                raw_email = msg_data[0][1]
+                msg = email.message_from_bytes(raw_email)
+                subject = _decode_subject(msg.get("Subject", ""))
 
-            match = OFFER_ID_RE.search(subject)
-            if not match:
-                logger.warning("[Feedback] Sujet sans offer_id reconnaissable : %s", subject)
+                match = OFFER_ID_RE.search(subject)
+                if not match:
+                    logger.warning("[Feedback] Sujet sans offer_id reconnaissable : %s", subject)
+                    imap.store(num, "+FLAGS", "\\Seen")
+                    continue
+
+                offer_id = match.group(1)
+                body = _extract_text_body(msg)
+                reason = _parse_reason(body)
+
+                results.append(FeedbackEmail(offer_id=offer_id, reason=reason))
                 imap.store(num, "+FLAGS", "\\Seen")
+            except Exception as e:
+                logger.warning(
+                    "[Feedback] Erreur lors du traitement du message %s, laissé non lu pour retry : %s",
+                    num, e,
+                )
                 continue
-
-            offer_id = match.group(1)
-            body = _extract_text_body(msg)
-            reason = _parse_reason(body)
-
-            results.append(FeedbackEmail(offer_id=offer_id, reason=reason))
-            imap.store(num, "+FLAGS", "\\Seen")
 
     except Exception as e:
         logger.error("[Feedback] Erreur IMAP : %s", e)

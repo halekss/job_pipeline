@@ -105,7 +105,49 @@ def test_fetch_feedback_emails_parses_and_marks_seen():
     assert results[1].offer_id == "ft_2", results[1].offer_id
     assert results[1].reason is None, results[1].reason
     assert fake_imap.store.call_count == 2, "les 2 messages doivent être marqués \\Seen"
+    fake_imap.search.assert_called_with(None, "UNSEEN", "SUBJECT", '"[Job Pipeline Feedback]"')
     print("OK: test_fetch_feedback_emails_parses_and_marks_seen")
+
+
+def test_fetch_feedback_emails_isolates_per_message_failure():
+    """
+    Une exception lors du traitement d'un message (ex. erreur IMAP transitoire
+    sur fetch) ne doit pas faire perdre les résultats déjà collectés pour les
+    autres messages du même batch, et le message en échec ne doit pas être
+    marqué \\Seen (pour être retenté au prochain run).
+    """
+    raw1 = _build_raw_email(
+        "[Job Pipeline Feedback] indeed_1", "Raison (optionnel) : comptabilité"
+    )
+    raw3 = _build_raw_email(
+        "[Job Pipeline Feedback] ft_3", "Raison (optionnel) : "
+    )
+
+    fake_imap = MagicMock()
+    fake_imap.login.return_value = ("OK", [b""])
+    fake_imap.select.return_value = ("OK", [b""])
+    fake_imap.search.return_value = ("OK", [b"1 2 3"])
+    fake_imap.fetch.side_effect = [
+        ("OK", [(b"1 (BODY[])", raw1)]),
+        Exception("transient IMAP error"),
+        ("OK", [(b"3 (BODY[])", raw3)]),
+    ]
+
+    with patch("imap_feedback.imaplib.IMAP4_SSL", return_value=fake_imap):
+        results = fetch_feedback_emails(
+            host="imap.example.com", user="alex@example.com", password="secret"
+        )
+
+    assert len(results) == 2, f"attendu 2 résultats (msg 1 et 3), obtenu {len(results)}"
+    assert results[0].offer_id == "indeed_1", results[0].offer_id
+    assert results[1].offer_id == "ft_3", results[1].offer_id
+
+    seen_calls = [call.args[0] for call in fake_imap.store.call_args_list]
+    assert b"1" in seen_calls, "le message 1 doit être marqué \\Seen"
+    assert b"3" in seen_calls, "le message 3 doit être marqué \\Seen"
+    assert b"2" not in seen_calls, "le message 2 (échoué) ne doit PAS être marqué \\Seen"
+    assert fake_imap.store.call_count == 2, "seuls les messages 1 et 3 doivent être marqués \\Seen"
+    print("OK: test_fetch_feedback_emails_isolates_per_message_failure")
 
 
 def test_fetch_feedback_emails_returns_empty_list_on_imap_error():
@@ -133,6 +175,7 @@ def main():
     test_parse_reason_returns_none_when_left_blank()
     test_parse_reason_returns_none_without_marker()
     test_fetch_feedback_emails_parses_and_marks_seen()
+    test_fetch_feedback_emails_isolates_per_message_failure()
     test_fetch_feedback_emails_returns_empty_list_on_imap_error()
     test_fetch_feedback_emails_returns_empty_list_without_credentials()
     print("\nTous les tests passent.")
