@@ -32,6 +32,8 @@ from sources.france_travail import FranceTravailSource
 from sources.indeed import IndeedSource
 from pipeline.filter import filter_offers
 from pipeline.dedup import DedupStore
+from pipeline.feedback import FeedbackStore
+from notifier.imap_feedback import fetch_feedback_emails
 from notifier.mailer import EmailNotifier
 
 # ---------------------------------------------------------------------------
@@ -87,9 +89,31 @@ def run(dry_run: bool = False, reset_dedup: bool = False, alternance_only: bool 
     storage_dir.mkdir(exist_ok=True)
 
     # ------------------------------------------------------------------
+    # 0. Lecture du feedback ("pas intéressé") reçu depuis le dernier run
+    # ------------------------------------------------------------------
+    logger.info("[1/6] Lecture du feedback...")
+    # DedupStore instancié ici (avant FeedbackStore) pour garantir que la
+    # table seen_offers existe déjà : FeedbackStore.record() la lit pour
+    # résoudre l'entreprise associée à un offer_id.
+    store = DedupStore()
+    feedback_store = FeedbackStore()
+
+    try:
+        feedback_emails = fetch_feedback_emails()
+        for fb in feedback_emails:
+            feedback_store.record(fb.offer_id, fb.reason)
+        logger.info("Feedback : %d email(s) traité(s)", len(feedback_emails))
+    except Exception as e:
+        logger.error("Erreur lecture feedback : %s", e)
+
+    feedback_store.purge_old(days=DEDUP_PURGE_DAYS)
+    company_penalties = feedback_store.get_company_penalties()
+    extra_negative_keywords = feedback_store.get_negative_keywords()
+
+    # ------------------------------------------------------------------
     # 1. Collecte
     # ------------------------------------------------------------------
-    logger.info("[1/5] Collecte des offres...")
+    logger.info("[2/6] Collecte des offres...")
     all_offers = []
 
     try:
@@ -129,11 +153,13 @@ def run(dry_run: bool = False, reset_dedup: bool = False, alternance_only: bool 
     # ------------------------------------------------------------------
     # 2. Filtrage et scoring
     # ------------------------------------------------------------------
-    logger.info("[2/5] Filtrage et scoring...")
+    logger.info("[3/6] Filtrage et scoring...")
     filtered = filter_offers(
         all_offers,
         min_score=MIN_SCORE,
         alternance_only=alternance_only,
+        company_penalties=company_penalties,
+        extra_negative_keywords=extra_negative_keywords,
     )
     logger.info("%d offres après filtrage (seuil=%d)", len(filtered), MIN_SCORE)
 
@@ -144,8 +170,7 @@ def run(dry_run: bool = False, reset_dedup: bool = False, alternance_only: bool 
     # ------------------------------------------------------------------
     # 3. Déduplication
     # ------------------------------------------------------------------
-    logger.info("[3/5] Déduplication...")
-    store = DedupStore()
+    logger.info("[4/6] Déduplication...")
 
     if reset_dedup:
         store.reset()
@@ -162,7 +187,7 @@ def run(dry_run: bool = False, reset_dedup: bool = False, alternance_only: bool 
     # ------------------------------------------------------------------
     # 4. Envoi email
     # ------------------------------------------------------------------
-    logger.info("[4/5] Envoi de l'alerte email...")
+    logger.info("[5/6] Envoi de l'alerte email...")
 
     email_sent = False
     if dry_run:
@@ -186,7 +211,7 @@ def run(dry_run: bool = False, reset_dedup: bool = False, alternance_only: bool 
     # ------------------------------------------------------------------
     # 5. Marquage comme vues (uniquement si l'email a été envoyé)
     # ------------------------------------------------------------------
-    logger.info("[5/5] Marquage des offres...")
+    logger.info("[6/6] Marquage des offres...")
     if dry_run:
         logger.info("[DRY RUN] Marquage ignoré.")
     elif email_sent:
