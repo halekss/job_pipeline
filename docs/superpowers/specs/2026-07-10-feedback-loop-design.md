@@ -19,7 +19,7 @@ Le pipeline tourne exclusivement en batch planifié (GitHub Actions, cron quotid
 Deux mécanismes, alimentés par le même geste (répondre "pas intéressé" à une offre) :
 
 1. **Pénalité par entreprise** — si une entreprise reçoit ≥ 2 "pas intéressé" (tous motifs confondus), ses offres futures reçoivent un malus de -20. Seuil à 2 pour éviter qu'une seule offre mal ciblée d'une entreprise par ailleurs pertinente ne la pénalise injustement.
-2. **Mots-clés négatifs appris** — le corps du mail de réponse contient une ligne pré-remplie `Raison (optionnel) : `. Si Alex tape un mot avant d'envoyer (ex. "comptabilité"), ce mot est ajouté aux mots-clés négatifs dès la première occurrence (signal volontaire et explicite d'Alex, pas besoin de répétition pour lui faire confiance), avec une pénalité de -30 — suffisant pour repasser sous `MIN_SCORE=20` une offre qui ne doit son score qu'au bonus alternance.
+2. **Mots-clés négatifs appris** — le corps du mail de réponse contient une ligne pré-remplie `Raison (optionnel) : `. Si Alex tape un mot avant d'envoyer (ex. "comptabilité"), ce mot est ajouté aux mots-clés négatifs dès la première occurrence (signal volontaire et explicite d'Alex, pas besoin de répétition pour lui faire confiance), avec une pénalité de -40 — suffisant pour repasser sous `MIN_SCORE=20` une offre qui ne doit son score qu'au bonus alternance (55 pts : +25 mot-clé +30 contrat). *Correction post-implémentation (Task 3) : la valeur initialement documentée ici, -30, ne suffisait pas (55-30=25, toujours ≥ 20) — vérifié par calcul direct sur `pipeline/filter.py::score_offer`. Portée à -40 dans `pipeline/feedback.py::DEFAULT_KEYWORD_PENALTY`.*
 
 Ces deux mécanismes sont indépendants et cumulables (un même feedback peut incrémenter le compteur entreprise ET ajouter un mot-clé négatif si une raison est fournie).
 
@@ -100,7 +100,7 @@ class FeedbackStore:
     def get_company_penalties(self, threshold: int = 2, penalty: float = -20) -> dict[str, float]:
         """{company.lower(): penalty} pour chaque entreprise avec >= threshold feedbacks."""
 
-    def get_negative_keywords(self, penalty: float = -30) -> list[tuple[str, float]]:
+    def get_negative_keywords(self, penalty: float = -40) -> list[tuple[str, float]]:
         """[(reason, penalty), ...] dédupliqué, pour chaque raison non vide distincte."""
 
     def purge_old(self, days: int = 60):

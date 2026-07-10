@@ -20,7 +20,7 @@ DEFAULT_DB_PATH = Path(__file__).parent.parent / "storage" / "jobs.db"
 
 DEFAULT_COMPANY_THRESHOLD = 2
 DEFAULT_COMPANY_PENALTY = 20.0
-DEFAULT_KEYWORD_PENALTY = 30.0
+DEFAULT_KEYWORD_PENALTY = 40.0
 
 
 class FeedbackStore:

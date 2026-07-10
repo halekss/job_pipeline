@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from filter import score_offer, filter_offers
 from sources.base_source import JobOffer
+from feedback import DEFAULT_KEYWORD_PENALTY
 
 
 def _make_offer(title, company, contract_type=None, description=""):
@@ -49,14 +50,16 @@ def test_company_penalty_matches_case_insensitively():
 
 def test_learned_negative_keyword_pushes_alternance_offer_below_threshold():
     # Cas réel COM-13 : "Alternance Comptable" passe le seuil (20) sur le
-    # seul bonus alternance (+25 mot-clé +30 contrat), sans mot-clé
-    # technique. Un mot-clé négatif appris doit repasser sous le seuil.
+    # seul bonus alternance (+25 mot-clé +30 contrat = 55), sans mot-clé
+    # technique. Le pénalité par défaut (DEFAULT_KEYWORD_PENALTY, cf.
+    # pipeline/feedback.py) doit être assez forte pour repasser ce cas
+    # précis sous le seuil (55 - pénalité < 20 => pénalité > 35).
     offer = _make_offer("Alternance Comptable", "Cabinet XYZ", contract_type="alternance")
     base_score = score_offer(offer)
     assert base_score >= 20, f"précondition : l'offre doit passer le seuil sans feedback (score={base_score})"
 
     penalized_score = score_offer(
-        offer, extra_negative_keywords=[("comptable", 36.0)]
+        offer, extra_negative_keywords=[("comptable", DEFAULT_KEYWORD_PENALTY)]
     )
     assert penalized_score < 20, f"attendu score < 20 après pénalité, obtenu {penalized_score}"
     print("OK: test_learned_negative_keyword_pushes_alternance_offer_below_threshold")
@@ -76,7 +79,7 @@ def test_filter_offers_excludes_offer_pushed_below_threshold_by_feedback():
     assert len(without_feedback) == 1, "précondition : l'offre passe sans feedback"
 
     with_feedback = filter_offers(
-        [offer], min_score=20, extra_negative_keywords=[("comptable", 36.0)]
+        [offer], min_score=20, extra_negative_keywords=[("comptable", DEFAULT_KEYWORD_PENALTY)]
     )
     assert len(with_feedback) == 0, f"attendu 0 offre après pénalité, obtenu {len(with_feedback)}"
     print("OK: test_filter_offers_excludes_offer_pushed_below_threshold_by_feedback")

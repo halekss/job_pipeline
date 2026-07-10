@@ -14,7 +14,7 @@
 - Reuse `SMTP_USER`/`SMTP_PASSWORD` for IMAP (Gmail app passwords work for both) — no new required secrets. `IMAP_HOST` is optional, defaults to `imap.gmail.com`.
 - `pipeline/filter.py` stays pure (no DB/network access) — it receives `company_penalties: dict[str, float]` and `extra_negative_keywords: list[tuple[str, float]]` as parameters with `None`/empty defaults that preserve current scoring behavior exactly.
 - Company penalty: threshold 2 occurrences, magnitude 20 points (subtracted, same convention as `NEGATIVE_KEYWORDS`/`AGE_PENALTIES` — positive numbers in config, subtracted in scoring).
-- Learned negative keyword (from explicit reason): magnitude 30 points, applied from the first occurrence (no threshold — it's a deliberate signal from Alex).
+- Learned negative keyword (from explicit reason): magnitude 40 points, applied from the first occurrence (no threshold — it's a deliberate signal from Alex). *(Corrected from 30 during Task 3: 30 was insufficient to push a pure alternance-bonus offer — score 55, no tech keywords — below MIN_SCORE=20; verified 55-30=25 stays above threshold, 55-40=15 clears it with margin.)*
 - Company name matching is case-insensitive on the full string (no fuzzy matching) — must lowercase in Python, not SQL (SQLite's `LOWER()` only handles ASCII and would mishandle accented French company names like "Décathlon" or "bioMérieux").
 - Tests follow this repo's convention: plain `assert`-based scripts with a `main()` function, run via `python <file>.py` (no pytest).
 - IMAP/network failures must never crash the pipeline — log and degrade gracefully (empty feedback), same pattern as `IndeedSource.fetch()`.
