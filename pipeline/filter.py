@@ -156,7 +156,36 @@ def _score_freshness(published_at: Optional[datetime]) -> float:
     return -AGE_PENALTIES[-1][1]
 
 
-def score_offer(offer: JobOffer) -> float:
+def _score_company_feedback(
+    company: str, company_penalties: Optional[dict[str, float]]
+) -> float:
+    """Malus si l'entreprise a reçu suffisamment de feedback 'pas intéressé' (COM-13)."""
+    if not company or not company_penalties:
+        return 0.0
+    return -company_penalties.get(company.strip().lower(), 0.0)
+
+
+def _score_learned_negative_keywords(
+    text: str, extra_negative_keywords: Optional[list[tuple[str, float]]]
+) -> float:
+    """Malus pour les mots-clés négatifs appris depuis les raisons de feedback (COM-13)."""
+    if not extra_negative_keywords:
+        return 0.0
+
+    text_lower = text.lower()
+    score = 0.0
+    for reason, penalty in extra_negative_keywords:
+        pattern = re.escape(reason.strip().lower())
+        if pattern and re.search(pattern, text_lower):
+            score -= penalty
+    return score
+
+
+def score_offer(
+    offer: JobOffer,
+    company_penalties: Optional[dict[str, float]] = None,
+    extra_negative_keywords: Optional[list[tuple[str, float]]] = None,
+) -> float:
     """
     Calcule et retourne le score total d'une offre (0-100, peut dépasser).
 
@@ -165,15 +194,22 @@ def score_offer(offer: JobOffer) -> float:
       - bonus type de contrat
       - bonus télétravail
       - malus ancienneté
+      - malus entreprise récurrente dans le feedback "pas intéressé" (COM-13)
+      - malus mots-clés négatifs appris depuis les raisons de feedback (COM-13)
     """
     full_text = f"{offer.title} {offer.description} {' '.join(offer.skills)}"
 
-    text_score     = _score_text(full_text)
-    contract_score = _score_contract(offer.contract_type)
-    remote_score   = _score_remote(offer.remote)
+    text_score      = _score_text(full_text)
+    contract_score  = _score_contract(offer.contract_type)
+    remote_score    = _score_remote(offer.remote)
     freshness_score = _score_freshness(offer.published_at)
+    company_score   = _score_company_feedback(offer.company, company_penalties)
+    learned_score   = _score_learned_negative_keywords(full_text, extra_negative_keywords)
 
-    total = text_score + contract_score + remote_score + freshness_score
+    total = (
+        text_score + contract_score + remote_score + freshness_score
+        + company_score + learned_score
+    )
     return round(max(0.0, total), 1)
 
 
@@ -196,14 +232,18 @@ def filter_offers(
     offers: list[JobOffer],
     min_score: float = MIN_SCORE,
     alternance_only: bool = False,
+    company_penalties: Optional[dict[str, float]] = None,
+    extra_negative_keywords: Optional[list[tuple[str, float]]] = None,
 ) -> list[JobOffer]:
     """
     Score toutes les offres, écarte celles sous le seuil, trie par score décroissant.
 
     Args:
-        offers          : liste brute de JobOffer
-        min_score       : seuil minimum (défaut MIN_SCORE)
-        alternance_only : si True, garde uniquement les offres en alternance
+        offers                   : liste brute de JobOffer
+        min_score                : seuil minimum (défaut MIN_SCORE)
+        alternance_only          : si True, garde uniquement les offres en alternance
+        company_penalties        : {entreprise en minuscules: pénalité} issu du feedback (COM-13)
+        extra_negative_keywords  : [(raison, pénalité), ...] issu du feedback (COM-13)
 
     Returns:
         Liste filtrée et triée, score rempli dans chaque JobOffer.
@@ -211,7 +251,7 @@ def filter_offers(
     logger.info("Scoring de %d offres (seuil=%d)...", len(offers), min_score)
 
     for offer in offers:
-        offer.score = score_offer(offer)
+        offer.score = score_offer(offer, company_penalties, extra_negative_keywords)
 
     before = len(offers)
     filtered = [o for o in offers if o.score >= min_score]
