@@ -25,9 +25,6 @@ jobs:
       - name: Installer les dépendances
         run: pip install -r requirements.txt
 
-      - name: Installer Chromium (StealthyFetcher / connecteur Indeed)
-        run: python -m patchright install --with-deps chromium
-
       - name: Exécuter le pipeline
         env:
           FT_CLIENT_ID: ${{ secrets.FT_CLIENT_ID }}
@@ -37,7 +34,10 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           ALERT_RECIPIENT: ${{ secrets.ALERT_RECIPIENT }}
-        run: python run.py
+        # --no-indeed : Indeed est bloqué par réputation IP sur les runners GitHub Actions
+        # (StealthyFetcher/Chromium headless ne suffit pas à contourner un blocage réseau/edge).
+        # Reste disponible en local (python run.py, sans le flag) où l'IP résidentielle passe.
+        run: python run.py --no-indeed
 
       - name: Committer la base de déduplication mise à jour
         run: |

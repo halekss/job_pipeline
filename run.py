@@ -14,6 +14,9 @@ Usage :
     python run.py --dry-run        # sans envoi email ni marquage
     python run.py --reset-dedup    # remet la base dedup à zéro
     python run.py --no-alternance  # inclut toutes les offres, pas que les alternances
+    python run.py --no-indeed      # désactive la collecte Indeed (utilisé par le cron cloud,
+                                    # bloqué par IP sur les runners GitHub Actions ; en local,
+                                    # Indeed reste actif par défaut car l'IP résidentielle passe)
 """
 
 import os
@@ -80,7 +83,12 @@ def _alert_failure(reason: str):
 # Pipeline
 # ---------------------------------------------------------------------------
 
-def run(dry_run: bool = False, reset_dedup: bool = False, alternance_only: bool = ALTERNANCE_ONLY):
+def run(
+    dry_run: bool = False,
+    reset_dedup: bool = False,
+    alternance_only: bool = ALTERNANCE_ONLY,
+    include_indeed: bool = True,
+):
     logger.info("=" * 60)
     logger.info("Démarrage du pipeline job_pipeline")
     logger.info("=" * 60)
@@ -130,17 +138,20 @@ def run(dry_run: bool = False, reset_dedup: bool = False, alternance_only: bool 
         logger.error("Erreur France Travail : %s", e)
         _alert_failure(f"Erreur lors de la collecte France Travail : {e}")
 
-    try:
-        indeed = IndeedSource(
-            keywords=KEYWORDS,
-            locations=LOCATIONS,
-        )
-        indeed_offers = indeed.fetch()
-        all_offers.extend(indeed_offers)
-        logger.info("Indeed : %d offres", len(indeed_offers))
-    except Exception as e:
-        logger.error("Erreur Indeed : %s", e)
-        _alert_failure(f"Erreur lors de la collecte Indeed : {e}")
+    if include_indeed:
+        try:
+            indeed = IndeedSource(
+                keywords=KEYWORDS,
+                locations=LOCATIONS,
+            )
+            indeed_offers = indeed.fetch()
+            all_offers.extend(indeed_offers)
+            logger.info("Indeed : %d offres", len(indeed_offers))
+        except Exception as e:
+            logger.error("Erreur Indeed : %s", e)
+            _alert_failure(f"Erreur lors de la collecte Indeed : {e}")
+    else:
+        logger.info("Indeed : collecte désactivée (--no-indeed)")
 
     # Ici on pourra ajouter d'autres sources plus tard :
     # all_offers.extend(WTTJSource(...).fetch())
@@ -246,6 +257,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Désactive le filtre alternance uniquement",
     )
+    parser.add_argument(
+        "--no-indeed",
+        action="store_true",
+        help="Désactive la collecte Indeed (utilisé par le cron cloud, bloqué par IP)",
+    )
     args = parser.parse_args()
 
     try:
@@ -253,6 +269,7 @@ if __name__ == "__main__":
             dry_run=args.dry_run,
             reset_dedup=args.reset_dedup,
             alternance_only=not args.no_alternance,
+            include_indeed=not args.no_indeed,
         )
     except Exception as e:
         logger.exception("Le pipeline a échoué de façon inattendue.")

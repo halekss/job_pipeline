@@ -70,3 +70,11 @@ Le risque décrit ci-dessus s'est matérialisé dès la première exécution en 
 - CI : nouvelle étape `python -m patchright install --with-deps chromium` avant `python run.py` (coût ~1-2 min / run, navigateur pas mis en cache pour l'instant).
 - `_build_params` inchangé ; l'URL est construite manuellement (`urlencode`) car `StealthyFetcher.fetch` prend une URL complète, pas de `params=`.
 - Gestion des erreurs inchangée (`_request_with_retry`, blocage → liste vide, pas d'exception qui remonterait à l'alerte COM-6).
+
+## Addendum (2026-07-11) : blocage IP confirmé, Indeed retiré du cron cloud
+
+L'escalade vers `StealthyFetcher` (ci-dessus) a corrigé le blocage par **empreinte** (un vrai Chromium headless passe là où `Fetcher.get` échouait — vérifié aussi depuis une IP résidentielle, donc ce n'était pas un problème d'IP à l'époque). Mais le premier run cloud réel après ce correctif (2026-07-10 17:39) a de nouveau reçu 403 sur 24/24 requêtes (précédées d'un redirect 307), alors que le même code depuis une IP résidentielle reçoit 200 de façon fiable et reproductible (re-testé le 2026-07-11). Diagnostic : le blocage restant est basé sur la **réputation de l'IP** des runners GitHub Actions (plages datacenter connues), au niveau réseau/edge — un navigateur headless, aussi convaincant soit-il, ne peut rien y faire.
+
+Décision (validée par Alex, contrainte budget zéro — pas de proxy résidentiel payant) : Indeed est retiré du cron cloud planifié. `run.py` gagne un flag `--no-indeed` (défaut : Indeed actif) ; le workflow GitHub Actions l'appelle avec `--no-indeed`, et l'étape d'installation de Chromium est retirée de la CI (plus nécessaire). Indeed reste pleinement fonctionnel en local : `python run.py` (sans le flag) depuis le PC d'Alex passe par son IP résidentielle et fait tourner le pipeline complet (collecte + scoring + dédup + email), à lancer ponctuellement quand il veut inclure Indeed.
+
+Pistes non retenues (budget zéro) : proxy résidentiel payant (coût récurrent écarté), runner self-hosted sur le PC d'Alex (réintroduit la contrainte "PC allumé à l'heure du cron" que le passage à GitHub Actions visait justement à éviter), proxies gratuits publics (peu fiables, souvent déjà sur IP datacenter blacklistées, risque de sécurité).
