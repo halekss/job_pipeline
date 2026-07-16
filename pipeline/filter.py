@@ -12,6 +12,7 @@ Les offres sous le seuil MIN_SCORE sont écartées.
 
 import re
 import logging
+import unicodedata
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -99,6 +100,32 @@ NEGATIVE_KEYWORDS: list[tuple[str, float]] = [
     (r"10\s*ans",    20),
     (r"8\s*ans",     15),
 ]
+
+# Organismes de formation / écoles à exclure systématiquement (filtre dur,
+# pas un malus) : ces offres émanent d'écoles/CFA recrutant pour leurs
+# propres besoins plutôt que d'entreprises proposant un vrai poste.
+# Les patterns sont comparés à un nom d'entreprise sans accents (cf.
+# _strip_accents), donc pas besoin de variantes accentuées ici.
+TRAINING_ORG_PATTERNS: list[str] = [
+    r"\bstudi\b",
+    r"\bironhack\b",
+    r"galileo global education",
+    r"\bcfa\b",
+    r"\becole\b",
+    r"\bschool\b",
+    r"\bformation\b",
+    r"\bcampus\b",
+    r"\binstitut\b",
+    r"\bacadem(?:y|ie)\b",
+    r"\buniversit\w*",
+]
+
+
+def _strip_accents(text: str) -> str:
+    """Retire les accents pour un matching robuste (Université == Universite)."""
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +255,14 @@ def _is_alternance(offer: JobOffer) -> bool:
     return any(m in ct or m in title for m in ALTERNANCE_MARKERS)
 
 
+def _is_training_org(company: Optional[str]) -> bool:
+    """Retourne True si l'entreprise est un organisme de formation / une école."""
+    if not company:
+        return False
+    company_norm = _strip_accents(company.lower())
+    return any(re.search(p, company_norm) for p in TRAINING_ORG_PATTERNS)
+
+
 def filter_offers(
     offers: list[JobOffer],
     min_score: float = MIN_SCORE,
@@ -249,6 +284,15 @@ def filter_offers(
         Liste filtrée et triée, score rempli dans chaque JobOffer.
     """
     logger.info("Scoring de %d offres (seuil=%d)...", len(offers), min_score)
+
+    before_training_filter = len(offers)
+    offers = [o for o in offers if not _is_training_org(o.company)]
+    excluded_training_orgs = before_training_filter - len(offers)
+    if excluded_training_orgs:
+        logger.info(
+            "%d offre(s) exclue(s) car publiées par un organisme de formation/école.",
+            excluded_training_orgs,
+        )
 
     for offer in offers:
         offer.score = score_offer(offer, company_penalties, extra_negative_keywords)
