@@ -60,7 +60,7 @@ logger = logging.getLogger("run")
 # Configuration
 # ---------------------------------------------------------------------------
 KEYWORDS  = ["Data Analyst", "Big Data", "alternance data", "data engineer", "remote", "télétravail"]
-LOCATIONS = ["59", "80", "69", "75"]   # Nord, Paris, Rhône — à adapter
+LOCATIONS = ["59", "80", "75"]   # Nord, Paris, Rhône — à adapter
 
 MIN_SCORE       = 20
 ALTERNANCE_ONLY = True   # False pour recevoir aussi les CDI/CDD pertinents
