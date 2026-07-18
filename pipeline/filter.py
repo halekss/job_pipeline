@@ -108,6 +108,7 @@ NEGATIVE_KEYWORDS: list[tuple[str, float]] = [
 # _strip_accents), donc pas besoin de variantes accentuées ici.
 TRAINING_ORG_PATTERNS: list[str] = [
     r"\bstudi\b",
+    r"\biscod\b",
     r"\bironhack\b",
     r"galileo global education",
     r"\bcfa\b",
